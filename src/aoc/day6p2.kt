@@ -53,20 +53,22 @@ fun main() {
     println("width=$width height=$height")
     println("x=$x y=$y")
 
-    val route = walk(input, width, height, PosDir(x, y, dirs[0]))!!
+    val start_pos = PosDir(x, y, dirs[0])
+    val route = walk(input, width, height, start_pos)!!
 
     println(route)
     println(route.map { it.x to it.y }.distinct().size)
 
     val loopers = mutableSetOf<Pair<Int, Int>>()
-    for (candidate in route.indices.drop(1)) { // not the start pos
-        val s = route[candidate - 1]
+    for (candidate in route.indices) {
         val obstacle = route[candidate]
+        if (obstacle.x == route[0].x && obstacle.y == route[0].y) continue // next to guard start
+        if (obstacle.x == route[1].x && obstacle.y == route[1].y) continue // next to guard start
         if ((obstacle.x to obstacle.y) in loopers) continue
         val grid = input.toCharArray()
         grid[obstacle.x + obstacle.y * width] = '#'
         val mod = String(grid)
-        val check = walk(mod, width, height, s)
+        val check = walk(mod, width, height, start_pos)
         if (check == null) loopers.add(obstacle.x to obstacle.y)
     }
 
@@ -75,8 +77,8 @@ fun main() {
             val grid = input[x + y * width]
             val c = when {
                 loopers.any { it.first == x && it.second == y } -> 'O'
-                route.any { it.x == x && it.y == y }   -> 'x'
-                else                                   -> grid
+//                route.any { it.x == x && it.y == y }   -> 'x'
+                else                                            -> grid
             }
             print(c)
         }
