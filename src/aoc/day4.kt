@@ -2,7 +2,7 @@ package aoc;
 
 import java.io.File
 
-private val searches = listOf("MAS", "SAM")
+private val searches = listOf("XMAS", "SAMX")
 
 private lateinit var dir: List<Int>
 
@@ -13,6 +13,27 @@ fun main() {
 
     dir = listOf(-nl - 1, -nl, -nl + 1, -1, +1, +nl - 1, +nl, +nl + 1)
 
+    println("part 1: ${solvePart1(input)}")
+    println("part 2: ${solvePart2(input, nl)}")
+}
+
+private fun solvePart1(input: String): Int {
+    var count = 0
+    for (i in input.indices) {
+        for (d in dir) {
+            for (s in searches) {
+                val match = s.indices.all {
+                    val lookup = input.getOrNull(i + d * it)
+                    s[it] == lookup
+                }
+                if (match) count++
+            }
+        }
+    }
+    return count / 2
+}
+
+private fun solvePart2(input: String, nl: Int): Int {
     var count = 0;
     for (i in input.indices.toList().dropLast(2 * nl + 2)) {
         if (input[i + nl + 1] != 'A') continue
@@ -24,6 +45,5 @@ fun main() {
         val b = (b1 == 'M' && b2 == 'S') || (b1 == 'S' && b2 == 'M')
         if (a && b) count++
     }
-
-    println(count)
+    return count
 }
