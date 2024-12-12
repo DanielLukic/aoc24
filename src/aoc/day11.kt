@@ -1,7 +1,6 @@
 package aoc;
 
 import java.io.File
-import kotlin.time.measureTime
 
 private val blinked = mutableMapOf<Pair<Long, Int>, Long>()
 
@@ -34,12 +33,6 @@ fun blink(stone: Long, blinks: Int): Long {
 
 fun main() {
     val input = File("day11.txt").readLines().single().split(" ").map(String::toLong).toMutableList()
-
-    println(input)
-
-    measureTime {
-        val results = input.map { blink(it, 75) }
-        println(results.sum())
-    }.also(::println)
-
+    println("part 1: ${input.sumOf { blink(it, 25) }}")
+    println("part 2: ${input.sumOf { blink(it, 75) }}")
 }
