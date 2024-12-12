@@ -1,18 +1,15 @@
 package aoc;
 
 import java.io.File
+import kotlin.time.measureTime
 
 private val blinked = mutableMapOf<Pair<Long, Int>, Long>()
 
 fun blink(stone: Long, blinks: Int): Long {
-    println("blink stone $stone blinks $blinks")
     if (blinks == 0) return 1L
 
     val known = blinked[stone to blinks]
-    if (known != null) {
-        println("known stone $stone blinks $blinks: $known")
-        return known
-    }
+    if (known != null) return known
 
     var num = stone
     blinks.downTo(1).forEach {
@@ -22,7 +19,6 @@ fun blink(stone: Long, blinks: Int): Long {
         }
         else if (check.length and 1 == 0) {
             val split = check.windowed(check.length / 2, check.length / 2)
-            println("split $split")
             val a = blink(split.first().toLong(), it - 1)
             val b = blink(split.last().toLong(), it - 1)
             blinked[stone to blinks] = a + b
@@ -41,7 +37,9 @@ fun main() {
 
     println(input)
 
-    val results = input.map { blink(it, 75) }
-    println(results.sum())
+    measureTime {
+        val results = input.map { blink(it, 75) }
+        println(results.sum())
+    }.also(::println)
 
 }
