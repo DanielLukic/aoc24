@@ -1,4 +1,4 @@
-package aoc;
+package aoc
 
 import java.io.File
 
@@ -8,51 +8,18 @@ private val _cost = mutableMapOf<Pair<Pos, Int>, Int>()
 private fun cost(pos: Pos, dir: Int) = _cost[pos to dir] ?: Int.MAX_VALUE
 private fun cost(path: Path) = _cost[path.pos to path.dir] ?: Int.MAX_VALUE
 
+private val tiles = mutableSetOf<Pos>()
+
 private lateinit var maze: Maze
 
 fun main() {
     maze = load_maze("aoc24d16.txt")
 
-    println(maze)
-    println(maze.start)
-    println(maze.end)
-
     val path = solve_part1()
-
     val seats = solve_part2(path)
 
-    maze.insert(path)
-    println(maze)
-    println(path)
-
-    maze.insert(tiles)
-    println(maze)
-    println(seats)
-}
-
-private val tiles = mutableSetOf<Pos>()
-
-private fun backtrack(pos: Pos, dir: Int) {
-    tiles.add(pos)
-
-    if (pos == maze.start) return
-
-    for (i in listOf(-1, 1)) {
-        val n_dir = (dir + i + 4) % 4
-        if (cost(pos, dir) - 1000 == cost(pos, n_dir)) {
-            backtrack(pos, n_dir)
-        }
-    }
-
-    val n_pos = pos + dirs[(dir + 2) % 4]
-    if (cost(pos, dir) - 1 == cost(n_pos, dir)) {
-        backtrack(n_pos, dir)
-    }
-}
-
-private fun solve_part2(end: Path): Int {
-    backtrack(end.pos, end.dir)
-    return tiles.size
+    maze.insert(path); println(maze); println(path)
+    maze.insert(tiles); println(maze); println(seats)
 }
 
 private fun solve_part1(): Path {
@@ -98,6 +65,29 @@ private fun solve_part1(): Path {
     return found.minBy { it.cost }
 }
 
+private fun solve_part2(end: Path): Int {
+    backtrack(end.pos, end.dir)
+    return tiles.size
+}
+
+private fun backtrack(pos: Pos, dir: Int) {
+    tiles.add(pos)
+
+    if (pos == maze.start) return
+
+    for (i in listOf(-1, 1)) {
+        val n_dir = (dir + i + 4) % 4
+        if (cost(pos, dir) - 1000 == cost(pos, n_dir)) {
+            backtrack(pos, n_dir)
+        }
+    }
+
+    val n_pos = pos + dirs[(dir + 2) % 4]
+    if (cost(pos, dir) - 1 == cost(n_pos, dir)) {
+        backtrack(n_pos, dir)
+    }
+}
+
 private operator fun Pos.plus(dir: Dir) = Pos(x + dir.dx, y + dir.dy)
 
 private data class Path(val pos: Pos, val dir: Int, val cost: Int) {
@@ -127,6 +117,8 @@ private class Maze(val grid: List<MutableList<Char>>) {
     override fun toString() = grid.joinToString("\n") { it.joinToString("") }
 
     fun insert(path: Path) {
+        val dump_dir = mapOf(0 to '>', 1 to '^', 2 to '<', 3 to 'v')
+
         var p: Path? = path
         while (p != null) {
             val row = grid[p.pos.y]
@@ -142,5 +134,3 @@ private class Maze(val grid: List<MutableList<Char>>) {
         }
     }
 }
-
-private val dump_dir = mapOf(0 to '>', 1 to '^', 2 to '<', 3 to 'v')
