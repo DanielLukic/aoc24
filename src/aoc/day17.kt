@@ -1,14 +1,14 @@
 package aoc
 
 private class Computer {
-    var a = 0
-    var b = 0
-    var c = 0
+    var a = 0L
+    var b = 0L
+    var c = 0L
 
-    val program = mutableListOf<Int>()
+    val program = listOf(2, 4, 1, 1, 7, 5, 0, 3, 1, 4, 4, 0, 5, 5, 3, 0)
     val output = mutableListOf<Int>()
 
-    fun run(): String {
+    fun run(): MutableList<Int> {
         output.clear()
 
         // Instruction pointer
@@ -28,7 +28,7 @@ private class Computer {
             // Combo operand 5 represents the value of register B.
             // Combo operand 6 represents the value of register C.
             // Combo operand 7 is reserved and will not appear in valid programs.
-            val literal = operand
+            val literal = operand.toLong()
             val combo = when (operand) {
                 0, 1, 2, 3 -> literal
                 4          -> a
@@ -40,7 +40,9 @@ private class Computer {
             // Execute instruction based on opcode
             when (opcode) {
                 0    -> { // adv - division in A register
-                    a /= (1 shl combo)
+                    val v = combo.toInt()
+                    check(v.toLong() == combo)
+                    a /= (1 shl v)
                     ip += 2
                 }
 
@@ -55,7 +57,9 @@ private class Computer {
                 }
 
                 3    -> { // jnz - jump if A is not zero
-                    if (a != 0) ip = literal else ip += 2
+                    val v = literal.toInt()
+                    check(v.toLong() == literal)
+                    if (a != 0L) ip = v else ip += 2
                 }
 
                 4    -> { // bxc - bitwise XOR of B and C
@@ -64,17 +68,21 @@ private class Computer {
                 }
 
                 5    -> { // out - output value
-                    output.add(combo % 8)
+                    output.add((combo % 8).toInt())
                     ip += 2
                 }
 
                 6    -> { // bdv - division in B register
-                    b = a / (1 shl combo)
+                    val v = combo.toInt()
+                    check(v.toLong() == combo)
+                    b = a / (1 shl v)
                     ip += 2
                 }
 
                 7    -> { // cdv - division in C register
-                    c = a / (1 shl combo)
+                    val v = combo.toInt()
+                    check(v.toLong() == combo)
+                    c = a / (1 shl v)
                     ip += 2
                 }
 
@@ -82,18 +90,32 @@ private class Computer {
             }
         }
 
-        return output.joinToString(",")
+        return output
     }
 }
 
 // Example usage and test
 fun main() {
-    println(part1(32916674))
-}
-
-private fun part1(a: Int): String {
     val c = Computer()
-    c.a = a
-    c.program.addAll(listOf(2, 4, 1, 1, 7, 5, 0, 3, 1, 4, 4, 0, 5, 5, 3, 0))
-    return c.run()
+    c.a = 32916674
+    println(c.run().joinToString(","))
+
+    fun search(value: Long, program_position: Int): Long {
+        if (program_position < 0) return value
+
+        val start = value shl 3
+        val end = start + 8
+        for (i in start..<end) {
+            c.a = i
+            val check = c.run()
+            if (check.first() == c.program[program_position]) {
+                val next = search(i, program_position - 1)
+                if (next != -1L) return next
+            }
+        }
+        return -1L
+    }
+
+    val result = search(0, c.program.size - 1);
+    println("part 2: $result")
 }
