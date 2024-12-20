@@ -18,17 +18,27 @@ private data class Cheat(
 )
 
 private class RaceTrackOptimizer(input: String) {
-    private val grid = input.trim().lines().map { it.toMutableList() }
+    private val grid = input.trim().lines().map { it.toList() }
     private val height = grid.size
     private val width = grid[0].size
     private val start: Point
     private val end: Point
-    private var normalShortestPath = 0
+    private val normalShortestPath: Int
+    private val distanceToEnd: Array<IntArray>  // Cache distances to end
+    private val distanceFromStart: Array<IntArray>  // Cache distances from start
+
+    var maxCheatDistance = 20  // Maximum cheat duration
 
     init {
         start = findPoint('S')
         end = findPoint('E')
-        normalShortestPath = findShortestPath(start, end)
+
+        // Precompute all distances
+        distanceToEnd = Array(height) { IntArray(width) { Int.MAX_VALUE } }
+        distanceFromStart = Array(height) { IntArray(width) { Int.MAX_VALUE } }
+        computeDistances()
+
+        normalShortestPath = distanceFromStart[end.y][end.x]
         println("Normal shortest path: $normalShortestPath")
     }
 
@@ -41,57 +51,86 @@ private class RaceTrackOptimizer(input: String) {
         throw IllegalArgumentException("Character $char not found in grid")
     }
 
-    private fun findShortestPath(from: Point, to: Point): Int {
-        val queue = ArrayDeque<Pair<Point, Int>>()
-        val seen = mutableSetOf<Point>()
-        queue.add(from to 0)
-        seen.add(from)
+    private fun isInBounds(point: Point) = point.y in 0..<height && point.x in 0..<width
 
-        while (queue.isNotEmpty()) {
-            val (current, steps) = queue.removeFirst()
+    private fun isTrack(point: Point) = grid[point.y][point.x] != '#'
 
-            for (next in current.neighbors()) {
-                if (next == to) return steps + 1
-                if (next in seen || !isValid(next)) continue
+    // Precompute all distances using BFS
+    private fun computeDistances() {
+        // Compute distances from start
+        bfs(start, distanceFromStart)
 
-                queue.add(next to steps + 1)
-                seen.add(next)
-            }
-        }
-        return Int.MAX_VALUE
+        // Compute distances to end (from end)
+        bfs(end, distanceToEnd)
     }
 
-    private fun isValid(point: Point) = point.y in 0..<height &&
-        point.x in 0..<width &&
-        grid[point.y][point.x] != '#'
+    private fun bfs(source: Point, distances: Array<IntArray>) {
+        val queue = ArrayDeque<Pair<Point, Int>>()
+        queue.add(source to 0)
+        distances[source.y][source.x] = 0
 
-    private fun findAllCheats(): Set<Cheat> {
-        val cheats = mutableSetOf<Cheat>()
+        while (queue.isNotEmpty()) {
+            val (pos, dist) = queue.removeFirst()
 
-        // Try all possible start positions
-        for (y in 0..<height) {
-            for (x in 0..<width) {
-                val row = grid[y]
-                if (row[x] != '#') continue
+            for (next in pos.neighbors()) {
+                if (!isInBounds(next) || !isTrack(next) ||
+                    distances[next.y][next.x] != Int.MAX_VALUE
+                ) continue
 
-                row[x] = '.'
-
-                val check = findShortestPath(start, end)
-                if (check < normalShortestPath) {
-                    cheats.add(Cheat(Point(x, y), Point(x, y), normalShortestPath - check))
-                }
-
-                row[x] = '#'
+                distances[next.y][next.x] = dist + 1
+                queue.add(next to dist + 1)
             }
         }
-        return cheats
+    }
+
+    private fun findCheats(): List<Cheat> {
+        val cheats = mutableMapOf<Pair<Point, Point>, Int>()
+
+        // For each possible start position that we can reach
+        for (y1 in 0..<height) {
+            for (x1 in 0..<width) {
+                val start = Point(x1, y1)
+                if (!isTrack(start)) continue
+
+                val distToCheatStart = distanceFromStart[y1][x1]
+                if (distToCheatStart == Int.MAX_VALUE) continue
+
+                // For each possible end position within maxCheatDistance Manhattan distance
+                for (y2 in maxOf(0, y1 - maxCheatDistance)..minOf(height - 1, y1 + maxCheatDistance)) {
+                    for (x2 in maxOf(0, x1 - maxCheatDistance)..minOf(width - 1, x1 + maxCheatDistance)) {
+                        val end = Point(x2, y2)
+                        if (!isTrack(end)) continue
+
+                        val distFromCheatEnd = distanceToEnd[y2][x2]
+                        if (distFromCheatEnd == Int.MAX_VALUE) continue
+
+                        // Calculate Manhattan distance for the cheat
+                        val cheatDist = kotlin.math.abs(x2 - x1) + kotlin.math.abs(y2 - y1)
+                        if (cheatDist > maxCheatDistance) continue
+
+                        // Calculate total path length with this cheat
+                        val totalDist = distToCheatStart + cheatDist + distFromCheatEnd
+                        val timeSaved = normalShortestPath - totalDist
+
+                        if (timeSaved > 0) {
+                            val key = start to end
+                            cheats[key] = maxOf(cheats.getOrDefault(key, 0), timeSaved)
+                        }
+                    }
+                }
+            }
+        }
+
+        return cheats.map { (positions, timeSaved) ->
+            Cheat(positions.first, positions.second, timeSaved)
+        }
     }
 
     fun countCheatsAboveThreshold(threshold: Int): Int {
-        val cheats = findAllCheats().distinct()
-        val grouped = cheats.groupBy { it.timeSaved }.toSortedMap()
-        grouped.forEach {
-            println("${it.value.size} times ${it.key} picoseconds")
+        val cheats = findCheats().filter { it.timeSaved >= 50 }
+        println("Total cheats found: ${cheats.size}")
+        cheats.groupBy { it.timeSaved }.toSortedMap().forEach { (saved, list) ->
+            println("$saved picoseconds saved: ${list.size} cheats")
         }
         return cheats.count { it.timeSaved >= threshold }
     }
@@ -117,5 +156,8 @@ fun main() {
 //    """.trimIndent()
 
     val optimizer = RaceTrackOptimizer(input)
+    optimizer.maxCheatDistance = 2
+    println("Number of cheats saving >= 100 picoseconds: ${optimizer.countCheatsAboveThreshold(100)}")
+    optimizer.maxCheatDistance = 20
     println("Number of cheats saving >= 100 picoseconds: ${optimizer.countCheatsAboveThreshold(100)}")
 }
