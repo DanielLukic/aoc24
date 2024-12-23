@@ -3,7 +3,7 @@ package aoc
 import java.io.File
 import kotlin.collections.*
 
-val data = File("data2024/aoc24d22.txt").readLines().map(String::toLong)
+private val data by lazy { File("data2024/aoc24d22.txt").readLines().map(String::toLong) }
 
 fun main() {
     part1(data)
